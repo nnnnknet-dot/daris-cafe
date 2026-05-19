@@ -669,7 +669,7 @@ useEffect(() => {
                 <div style={{ marginBottom: 18, textAlign: "center" }}>
                   <div style={{ background: dm ? "#001a10" : "#f0faf5", border: `1.5px solid ${dm ? "#0a4028" : "#a8d5bc"}`, borderRadius: 14, padding: "18px 14px", display: "inline-block" }}>
                     <div style={{ background: dm ? "#0a1f18" : "white", borderRadius: 10, padding: 10, display: "inline-block", boxShadow: "0 2px 10px rgba(0,0,0,.15)", marginBottom: 10 }}>
-                      <PromptPayQRCanvas amount={total} size={200} dark={dm} />
+                      <div>QR PAYMENT</div>
                     </div>
                     <div className="cf" style={{ fontSize: 26, fontWeight: 700, color: "#1a9070", marginBottom: 2 }}>฿{total.toLocaleString()}</div>
                     <div className="s" style={{ fontSize: 11, color: dm ? "#5a8a72" : "#5a8a72" }}>ยอดฝังใน QR แล้ว — ลูกค้าไม่ต้องกรอก</div>
@@ -1246,7 +1246,7 @@ useEffect(() => {
                         <span className="tag" style={{ background: kt.bg, color: kt.color, fontSize: 11 }}>{kt.label}</span>
                       </div>
                       <div style={{ padding: 8, background: dm ? "#0a0604" : "#fdfaf6", borderRadius: 10, border: "1.5px solid var(--border)" }}>
-                        <QRCanvas text={`${BASE_URL}?table=${tbl.id}`} size={140} dark={dm} />
+                       {/* <QRCanvas text={`${BASE_URL}?table=${tbl.id}`} size={140} dark={dm} /> */}
                       </div>
                       <div style={{ background: "var(--accent)", color: dm ? "#0e0905" : "#f5e6d3", borderRadius: 8, padding: "7px 0", width: "100%", textAlign: "center" }}>
                         <div className="cf" style={{ fontSize: 20, fontWeight: 700, letterSpacing: 1 }}>โต๊ะ {tbl.id}</div>
