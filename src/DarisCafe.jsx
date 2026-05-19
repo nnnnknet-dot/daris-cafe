@@ -7,7 +7,7 @@ function formatPromptPayId(id) {
   const d = id.replace(/\D/g, "");
   if (d.length === 13) return "0000000000013" + d;
   if (d.length === 10) return "0066" + d.slice(1);
-  return d;
+  return d
 }
 function crc16(data) {
   let crc = 0xffff;
