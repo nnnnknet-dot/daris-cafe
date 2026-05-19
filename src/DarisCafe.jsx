@@ -5,174 +5,61 @@ const PROMPTPAY_ID = "1342549531";
 
 function formatPromptPayId(id) {
   const d = id.replace(/\D/g, "");
-
-  if (d.length === 13) {
-    return "0000000000013" + d;
-  }
-
-  if (d.length === 10) {
-    return "0066" + d.slice(1);
-  }
-
+  if (d.length === 13) return "0000000000013" + d;
+  if (d.length === 10) return "0066" + d.slice(1);
   return d;
 }
-
 function crc16(data) {
   let crc = 0xffff;
-
   for (let i = 0; i < data.length; i++) {
     crc ^= data.charCodeAt(i) << 8;
-
-    for (let j = 0; j < 8; j++) {
-      crc =
-        crc & 0x8000
-          ? (crc << 1) ^ 0x1021
-          : crc << 1;
-    }
+    for (let j = 0; j < 8; j++) crc = crc & 0x8000 ? (crc << 1) ^ 0x1021 : crc << 1;
   }
-
-  return (crc & 0xffff)
-    .toString(16)
-    .toUpperCase()
-    .padStart(4, "0");
+  return (crc & 0xffff).toString(16).toUpperCase().padStart(4, "0");
 }
-
-function tlv(tag, value) {
-  return (
-    tag +
-    value.length.toString().padStart(2, "0") +
-    value
-  );
-}
-
+function tlv(tag, value) { return tag + value.length.toString().padStart(2, "0") + value; }
 function generatePromptPayQR(id, amount) {
   const fmtId = formatPromptPayId(id);
-
-  const merchantInfo =
-    tlv("00", "A000000677010111") +
-    tlv("01", fmtId);
-
+  const merchantInfo = tlv("00", "A000000677010111") + tlv("01", fmtId);
   let payload =
-    tlv("00", "01") +
-    tlv("01", "12") +
-    tlv("29", merchantInfo) +
-    tlv("53", "764") +
-    (amount
-      ? tlv("54", amount.toFixed(2))
-      : "") +
-    tlv("58", "TH") +
-    tlv("59", "DARIS CAFE") +
-    tlv("60", "Bangkok") +
-    "6304";
-
+    tlv("00", "01") + tlv("01", "12") + tlv("29", merchantInfo) +
+    tlv("53", "764") + (amount ? tlv("54", amount.toFixed(2)) : "") +
+    tlv("58", "TH") + tlv("59", "DARIS CAFE") + tlv("60", "Bangkok") + "6304";
   return payload + crc16(payload);
 }
 
-// ─── QR Code renderer ─────────────────────────────────────────────────────────
-function QRCanvas({
-  text,
-  size = 200,
-  dark = false,
-}) {
+// ─── QR Code renderer (pure JS, no external fetch) ───────────────────────────
+function QRCanvas({ text, size = 200, dark = false }) {
   const ref = useRef(null);
-
   useEffect(() => {
     if (!text || !ref.current) return;
-
     const el = ref.current;
     el.innerHTML = "";
-
     const load = () => {
-      if (
-        typeof window === "undefined" ||
-        !window.QRCode
-      ) {
-        return;
-      }
-
       new window.QRCode(el, {
-        text,
-        width: size,
-        height: size,
-        colorDark: dark
-          ? "#f5e6d3"
-          : "#000000",
-        colorLight: dark
-          ? "#1a0f08"
-          : "#ffffff",
-        correctLevel:
-          window.QRCode?.CorrectLevel?.M || 0,
+        text, width: size, height: size,
+        colorDark: dark ? "#f5e6d3" : "#000000",
+        colorLight: dark ? "#1a0f08" : "#ffffff",
+        correctLevel: window.QRCode.CorrectLevel.M,
       });
     };
-
-    if (
-      typeof window !== "undefined" &&
-      window.QRCode
-    ) {
-      load();
-      return;
-    }
-
-    if (
-      document.querySelector(
-        'script[data-qrlib]'
-      )
-    ) {
-      const wait = setInterval(() => {
-        if (window.QRCode) {
-          clearInterval(wait);
-          load();
-        }
-      }, 80);
-
+    if (window.QRCode) { load(); return; }
+    if (document.querySelector('script[data-qrlib]')) {
+      const wait = setInterval(() => { if (window.QRCode) { clearInterval(wait); load(); } }, 80);
       return () => clearInterval(wait);
     }
-
     const s = document.createElement("script");
-
-    s.src =
-      "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
-
+    s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js";
     s.setAttribute("data-qrlib", "1");
-
     s.onload = load;
-
     document.head.appendChild(s);
   }, [text, size, dark]);
-
-  return (
-    <div
-      ref={ref}
-      style={{
-        width: size,
-        height: size,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        borderRadius: 8,
-        overflow: "hidden",
-      }}
-    />
-  );
+  return <div ref={ref} style={{ width: size, height: size, display: "flex", alignItems: "center", justifyContent: "center", borderRadius: 8, overflow: "hidden" }} />;
 }
 
-function PromptPayQRCanvas({
-  amount,
-  size = 200,
-  dark = false,
-}) {
-  const payload = generatePromptPayQR(
-    PROMPTPAY_ID,
-    amount
-  );
-
-  return (
-    <QRCanvas
-      text={payload}
-      size={size}
-      dark={dark}
-    />
-  );
+function PromptPayQRCanvas({ amount, size = 200, dark = false }) {
+  const payload = generatePromptPayQR(PROMPTPAY_ID, amount);
+  return <QRCanvas text={payload} size={size} dark={dark} />;
 }
 
 // ─── Data ─────────────────────────────────────────────────────────────────────
@@ -195,7 +82,7 @@ const PAY_METHODS = [
   { id: "qr", label: "QR / พร้อมเพย์", icon: "📲" },
   { id: "card", label: "บัตรเครดิต", icon: "💳" },
 ];
-const BASE_URL = "https://daris-cafe.vercel.app";
+const BASE_URL = "https://dariscafe.pos/order";
 const ADMIN_PIN = "1234";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -218,20 +105,15 @@ const kitchenTag = (t, dm) => {
   return { label: "ไม่ว่าง", ...s.busy };
 };
 const mergeItems = (orders) => {
-  const m = new Map();
-
-  (orders || [])
-    .flatMap((o) => o.items || [])
-    .forEach((item) => {
-      if (m.has(item.id)) {
-        m.get(item.id).qty += item.qty;
-      } else {
-        m.set(item.id, { ...item });
-      }
-    });
-
-  return Array.from(m.values());
+  const m = {};
+  orders.flatMap((o) => o.items).forEach((item) => {
+    if (m[item.id]) m[item.id].qty += item.qty;
+    else m[item.id] = { ...item };
+  });
+  return Object.values(m);
 };
+const orderTotal = (tbl) => mergeItems(tbl.orders || []).reduce((s, c) => s + c.price * c.qty, 0);
+
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 const buildCSS = (dm) => `
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Lato:wght@300;400;700&display=swap');
@@ -327,81 +209,55 @@ export default function DarisCafe() {
   const [cartOpen, setCartOpen] = useState(false); // mobile cart drawer
   // myTable = โต๊ะที่ลูกค้าเลือกไว้แล้ว (ล็อคตลอด session)
   const [myTable, setMyTable] = useState(() => {
-   const [myTable, setMyTable] = useState(() => {
-  try {
-    if (typeof window === "undefined") {
-      return null;
-    }
-
-    const v = sessionStorage.getItem("myTable");
-
-    return v ? Number(v) : null;
-  } catch {
-    return null;
-  }
-});
+    try { const v = sessionStorage.getItem("myTable"); return v ? Number(v) : null; } catch { return null; }
   });
 
   const dm = darkMode;
 
-// ── Load from localStorage ──
-useEffect(() => {
-  try {
-    const sales = localStorage.getItem("sales-history");
-    if (sales) setAllSales(JSON.parse(sales));
+  // ── Load from storage ──
+  useEffect(() => {
+    (async () => {
+      try {
+        const s = await window.storage.get("sales-history");
+        if (s) setAllSales(JSON.parse(s.value));
+      } catch (e) {}
+      try {
+        const m = await window.storage.get("menu-data");
+        if (m) setMenu(JSON.parse(m.value));
+      } catch (e) {}
+      try {
+        const d = await window.storage.get("dark-mode");
+        if (d) setDarkMode(d.value === "1");
+      } catch (e) {}
+      setMenuLoaded(true);
+    })();
+  }, []);
 
-    const menuData = localStorage.getItem("menu-data");
-    if (menuData) setMenu(JSON.parse(menuData));
+  // ── Persist sales ──
+  useEffect(() => {
+    if (allSales.length === 0) return;
+    window.storage.set("sales-history", JSON.stringify(allSales)).catch(() => {});
+  }, [allSales]);
 
-    const dark = localStorage.getItem("dark-mode");
-    if (dark === "1") setDarkMode(true);
-  } catch (e) {
-    console.log(e);
-  }
+  // ── Persist menu (after initial load) ──
+  useEffect(() => {
+    if (!menuLoaded) return;
+    window.storage.set("menu-data", JSON.stringify(menu)).catch(() => {});
+  }, [menu, menuLoaded]);
 
-  setMenuLoaded(true);
-}, []);
+  // ── Persist dark mode ──
+  useEffect(() => {
+    window.storage.set("dark-mode", dm ? "1" : "0").catch(() => {});
+  }, [dm]);
 
-// ── Save sales ──
-useEffect(() => {
-  localStorage.setItem("sales-history", JSON.stringify(allSales));
-}, [allSales]);
-
-// ── Save menu ──
-useEffect(() => {
-  if (!menuLoaded) return;
-  localStorage.setItem("menu-data", JSON.stringify(menu));
-}, [menu, menuLoaded]);
-
-// ── Save dark mode ──
-useEffect(() => {
-  localStorage.setItem("dark-mode", dm ? "1" : "0");
-}, [dm]);
   const claimTable = (tableId) => {
-  setMyTable(tableId);
-
-  try {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem(
-        "myTable",
-        String(tableId)
-      );
-    }
-  } catch (e) {
-    console.error(e);
-  }
-};
- const releaseMyTable = () => {
-  setMyTable(null);
-
-  try {
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem("myTable");
-    }
-  } catch (e) {
-    console.error(e);
-  }
-};
+    setMyTable(tableId);
+    try { sessionStorage.setItem("myTable", String(tableId)); } catch {}
+  };
+  const releaseMyTable = () => {
+    setMyTable(null);
+    try { sessionStorage.removeItem("myTable"); } catch {}
+  };
 
   const notify = (msg, type = "success") => {
     setNotif({ msg, type });
@@ -585,7 +441,7 @@ useEffect(() => {
                 <span className="s" style={{ fontSize: 12 }}>{receipt.date} {receipt.time}</span>
               </div>
               <hr className="div" />
-              {(receipt.items || []).map((item, i) => (
+              {receipt.items.map((item, i) => (
                 <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0" }}>
                   <span className="s" style={{ fontSize: 13 }}>{item.emoji} {item.name} ×{item.qty}</span>
                   <span className="s" style={{ fontSize: 13, color: "var(--accent2)" }}>฿{item.price * item.qty}</span>
@@ -632,7 +488,7 @@ useEffect(() => {
               <h2 className="cf" style={{ fontSize: 22, color: "var(--text)", marginBottom: 4 }}>ชำระเงิน — โต๊ะ {payModal}</h2>
               <p className="s" style={{ fontSize: 13, color: "var(--text2)", marginBottom: 18 }}>เลือกวิธีชำระเงิน</p>
               <div style={{ background: "var(--surface2)", borderRadius: 10, padding: 14, marginBottom: 18 }}>
-                {(items || []).map((item, i) => (
+                {items.map((item, i) => (
                   <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "3px 0", fontSize: 13, fontFamily: "Lato,sans-serif" }}>
                     <span>{item.emoji} {item.name} ×{item.qty}</span>
                     <span style={{ color: "var(--accent2)" }}>฿{item.price * item.qty}</span>
@@ -669,7 +525,7 @@ useEffect(() => {
                 <div style={{ marginBottom: 18, textAlign: "center" }}>
                   <div style={{ background: dm ? "#001a10" : "#f0faf5", border: `1.5px solid ${dm ? "#0a4028" : "#a8d5bc"}`, borderRadius: 14, padding: "18px 14px", display: "inline-block" }}>
                     <div style={{ background: dm ? "#0a1f18" : "white", borderRadius: 10, padding: 10, display: "inline-block", boxShadow: "0 2px 10px rgba(0,0,0,.15)", marginBottom: 10 }}>
-                      <div>QR PAYMENT</div>
+                      <PromptPayQRCanvas amount={total} size={200} dark={dm} />
                     </div>
                     <div className="cf" style={{ fontSize: 26, fontWeight: 700, color: "#1a9070", marginBottom: 2 }}>฿{total.toLocaleString()}</div>
                     <div className="s" style={{ fontSize: 11, color: dm ? "#5a8a72" : "#5a8a72" }}>ยอดฝังใน QR แล้ว — ลูกค้าไม่ต้องกรอก</div>
@@ -1246,7 +1102,7 @@ useEffect(() => {
                         <span className="tag" style={{ background: kt.bg, color: kt.color, fontSize: 11 }}>{kt.label}</span>
                       </div>
                       <div style={{ padding: 8, background: dm ? "#0a0604" : "#fdfaf6", borderRadius: 10, border: "1.5px solid var(--border)" }}>
-                       {/* <QRCanvas text={`${BASE_URL}?table=${tbl.id}`} size={140} dark={dm} /> */}
+                        <QRCanvas text={`${BASE_URL}?table=${tbl.id}`} size={140} dark={dm} />
                       </div>
                       <div style={{ background: "var(--accent)", color: dm ? "#0e0905" : "#f5e6d3", borderRadius: 8, padding: "7px 0", width: "100%", textAlign: "center" }}>
                         <div className="cf" style={{ fontSize: 20, fontWeight: 700, letterSpacing: 1 }}>โต๊ะ {tbl.id}</div>
