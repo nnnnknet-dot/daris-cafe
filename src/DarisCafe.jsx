@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 
 // ─── PromptPay QR (EMV) ───────────────────────────────────────────────────────
 const PROMPTPAY_ID = "1342549531";
@@ -216,39 +216,39 @@ export default function DarisCafe() {
 
   // ── Load from storage ──
   useEffect(() => {
-    (async () => {
-      try {
-        const s = await window.storage.get("sales-history");
-        if (s) setAllSales(JSON.parse(s.value));
-      } catch (e) {}
-      try {
-        const m = await window.storage.get("menu-data");
-        if (m) setMenu(JSON.parse(m.value));
-      } catch (e) {}
-      try {
-        const d = await window.storage.get("dark-mode");
-        if (d) setDarkMode(d.value === "1");
-      } catch (e) {}
-      setMenuLoaded(true);
-    })();
-  }, []);
+  try {
+    const s = localStorage.getItem("sales-history");
+    if (s) setAllSales(JSON.parse(s));
+  } catch (e) {}
+
+  try {
+    const m = localStorage.getItem("menu-data");
+    if (m) setMenu(JSON.parse(m));
+  } catch (e) {}
+
+  try {
+    const d = localStorage.getItem("dark-mode");
+    if (d) setDarkMode(d === "1");
+  } catch (e) {}
+
+  setMenuLoaded(true);
+}, []);
 
   // ── Persist sales ──
   useEffect(() => {
     if (allSales.length === 0) return;
-    window.storage.set("sales-history", JSON.stringify(allSales)).catch(() => {});
+    localStorage.setItem("sales-history", JSON.stringify(allSales)).catch(() => {});
   }, [allSales]);
 
   // ── Persist menu (after initial load) ──
   useEffect(() => {
-    if (!menuLoaded) return;
-    window.storage.set("menu-data", JSON.stringify(menu)).catch(() => {});
-  }, [menu, menuLoaded]);
+  localStorage.setItem("dark-mode", dm ? "1" : "0");
+}, [dm]);
 
   // ── Persist dark mode ──
-  useEffect(() => {
-    window.storage.set("dark-mode", dm ? "1" : "0").catch(() => {});
-  }, [dm]);
+useEffect(() => {
+  localStorage.setItem("dark-mode", dm ? "1" : "0");
+}, [dm]);
 
   const claimTable = (tableId) => {
     setMyTable(tableId);
@@ -621,7 +621,7 @@ export default function DarisCafe() {
                 <button className="btn br sm" style={{ fontSize: 11 }} onClick={async () => {
                   if (!confirm("ลบประวัติยอดขายทั้งหมดใช่ไหม?")) return;
                   setAllSales([]); setDailySales([]);
-                  try { await window.storage.delete("sales-history"); } catch(e) {}
+                  try { await localStorage.storage.delete("sales-history"); } catch(e) {}
                   notify("ล้างข้อมูลยอดขายแล้ว", "danger");
                   setShowSummary(false);
                 }}>🗑 ล้างข้อมูล</button>
